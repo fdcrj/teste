@@ -1,0 +1,9 @@
+{
+  "name": "mapa-degustacao-cervejas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Painel estático de catálogo e degustação de cervejas com proxy Google Sheets opcional.",
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}

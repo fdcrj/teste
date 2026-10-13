@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#151713">
+  <meta name="description" content="Catálogo interativo de cervejas, confrarias e notas de degustação.">
+  <title>Mapa de Degustação — Catálogo de cervejas</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #151713;
+      --ink-soft: #1c1f1a;
+      --panel: #22251f;
+      --panel-2: #292c25;
+      --line: #393c34;
+      --muted: #a7a899;
+      --paper: #f0eddf;
+      --paper-dim: #d3d0c1;
+      --accent: #d89a54;
+      --accent-soft: #efbd7f;
+      --green: #9cbd91;
+      --red: #ed967d;
+      --yellow: #f0c46e;
+      --radius: 16px;
+      --shadow: 0 24px 80px rgba(0,0,0,.28);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--ink); color: var(--paper); min-width: 320px; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: var(--accent-soft); }
+    .app-shell { max-width: 1500px; margin: 0 auto; padding: 0 36px 56px; }
+    .topbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 12px; letter-spacing: .13em; font-size: 11px; text-transform: uppercase; color: var(--paper-dim); font-weight: 750; }
+    .brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid var(--accent); color: var(--accent-soft); border-radius: 50% 50% 45% 45%; font: 700 15px Georgia, serif; transform: rotate(-8deg); }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .sync-status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .status-dot { width: 7px; height: 7px; background: var(--yellow); border-radius: 50%; box-shadow: 0 0 0 4px rgba(240,196,110,.12); }
+    .status-dot.ok { background: var(--green); box-shadow: 0 0 0 4px rgba(156,189,145,.12); }
+    .status-dot.error { background: var(--red); box-shadow: 0 0 0 4px rgba(237,150,125,.12); }
+    .icon-button, .button { border: 1px solid var(--line); color: var(--paper); background: transparent; border-radius: 10px; padding: 9px 13px; font-weight: 650; font-size: 12px; transition: .18s ease; }
+    .icon-button:hover, .button:hover { border-color: var(--accent); color: var(--accent-soft); transform: translateY(-1px); }
+    .button.primary { background: var(--accent); color: #20180f; border-color: var(--accent); }
+    .button.primary:hover { background: var(--accent-soft); color: #20180f; }
+    .button.small { padding: 7px 10px; font-size: 11px; }
+    .hero { padding: 43px 0 28px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 24px; align-items: end; }
+    .eyebrow { color: var(--accent-soft); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .2em; }
+    h1 { font: 500 clamp(38px, 5.8vw, 72px)/.98 Georgia, "Times New Roman", serif; letter-spacing: -.045em; margin: 12px 0 13px; }
+    .hero p { max-width: 640px; color: var(--muted); font-size: 14px; line-height: 1.65; margin: 0; }
+    .hero-meta { border-left: 1px solid var(--line); padding-left: 24px; align-self: center; min-width: 190px; }
+    .hero-meta .meta-label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .13em; }
+    .hero-meta strong { display: block; font: 500 32px Georgia,serif; margin: 7px 0 3px; }
+    .hero-meta span:last-child { color: var(--muted); font-size: 11px; }
+    .notice { display: none; border: 1px solid rgba(237,150,125,.35); background: rgba(237,150,125,.08); color: #f4c4b6; padding: 13px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 13px; line-height: 1.5; }
+    .notice.show { display: block; }
+    .notice.data { border-color: rgba(240,196,110,.35); background: rgba(240,196,110,.08); color: #f2d99f; }
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin: 14px 0 24px; }
+    .stat-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 17px 18px; min-height: 112px; }
+    .stat-label { color: var(--muted); text-transform: uppercase; letter-spacing: .12em; font-size: 9px; font-weight: 750; display: flex; justify-content: space-between; gap: 8px; }
+    .stat-value { font: 500 31px Georgia,serif; margin: 12px 0 3px; }
+    .stat-foot { color: var(--muted); font-size: 10px; }
+    .filters { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin: 0 0 22px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .section-head h2, .chart-title, .table-title { font: 500 21px Georgia,serif; margin: 0; }
+    .filter-grid { display: grid; grid-template-columns: 1.1fr 1fr 1.25fr 1.25fr 1.25fr 1.7fr; gap: 10px; align-items: end; }
+    .field label { display: block; color: var(--muted); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700; margin: 0 0 7px 2px; }
+    .field select, .field input, .range input, .modal-field input, .modal-field textarea { width: 100%; color: var(--paper); background: var(--ink-soft); border: 1px solid var(--line); border-radius: 9px; padding: 10px 11px; outline: none; min-height: 39px; }
+    .field select:focus, .field input:focus, .range input:focus, .modal-field input:focus, .modal-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(216,154,84,.12); }
+    .range { display: flex; gap: 6px; }
+    .range input { min-width: 0; }
+    input::placeholder, textarea::placeholder { color: #72766b; }
+    .filter-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
+    .check-label { display: inline-flex; align-items: center; gap: 8px; color: var(--paper-dim); font-size: 12px; }
+    .check-label input { accent-color: var(--accent); width: 15px; height: 15px; }
+    .filter-actions { display: flex; align-items: center; gap: 8px; }
+    .result-count { color: var(--muted); font-size: 11px; margin-right: 8px; }
+    .charts { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; margin: 0 0 22px; }
+    .chart-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 17px 12px; min-height: 276px; overflow: hidden; }
+    .chart-card header { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+    .chart-title { font-size: 17px; }
+    .chart-subtitle { color: var(--muted); font-size: 10px; margin-top: 5px; }
+    .chart-card svg { width: 100%; height: 205px; display: block; overflow: visible; margin-top: 10px; }
+    .chart-empty { height: 205px; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
+    .axis { stroke: #54574e; stroke-width: 1; }
+    .grid-line { stroke: #35382f; stroke-width: 1; stroke-dasharray: 3 5; }
+    .axis-label { fill: #9a9d8f; font-size: 9px; }
+    .chart-point { fill: var(--accent); stroke: #f2c48e; stroke-width: 1.5; opacity: .82; cursor: pointer; transition: r .15s, opacity .15s; }
+    .chart-point:hover { r: 7; opacity: 1; }
+    .bar-bg { fill: #35382f; }
+    .bar-fill { fill: var(--accent); }
+    .bar-hit { fill: transparent; cursor: pointer; }
+    .bar-hit:hover + .bar-fill { fill: var(--accent-soft); }
+    .bar-label { fill: var(--paper-dim); font-size: 9px; }
+    .bar-value { fill: var(--muted); font-size: 9px; }
+    .table-section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .table-toolbar { padding: 17px 19px; display: flex; justify-content: space-between; align-items: center; gap: 14px; border-bottom: 1px solid var(--line); }
+    .table-title { font-size: 21px; }
+    .table-caption { color: var(--muted); font-size: 10px; margin-top: 5px; }
+    .table-tools { display: flex; align-items: center; gap: 8px; }
+    .table-tools select { background: var(--ink-soft); color: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 9px; font-size: 11px; }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; min-width: 940px; }
+    th { text-align: left; color: var(--muted); font-size: 9px; letter-spacing: .11em; text-transform: uppercase; padding: 12px 13px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    td { padding: 13px; border-bottom: 1px solid rgba(57,60,52,.7); font-size: 12px; vertical-align: middle; }
+    tbody tr:hover { background: rgba(255,255,255,.025); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .beer-name { font: 500 15px Georgia,serif; color: var(--paper); max-width: 260px; }
+    .beer-brewer { color: var(--muted); font-size: 10px; margin-top: 4px; max-width: 260px; white-space: normal; }
+    .confra-pill, .type-pill { display: inline-block; border-radius: 99px; padding: 5px 8px; white-space: nowrap; font-size: 10px; font-weight: 750; }
+    .confra-pill { color: var(--accent-soft); background: rgba(216,154,84,.11); }
+    .type-pill { color: var(--paper-dim); background: #34372f; }
+    .style-name { max-width: 170px; white-space: normal; line-height: 1.4; color: var(--paper-dim); }
+    .metric { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .metric.missing { color: var(--yellow); }
+    .missing-tag { display: block; color: var(--yellow); font-size: 8px; text-transform: uppercase; letter-spacing: .06em; margin-top: 3px; }
+    .tasting-button { border: 1px solid #55594d; background: transparent; color: var(--paper-dim); border-radius: 8px; padding: 7px 9px; font-size: 10px; white-space: nowrap; }
+    .tasting-button:hover { border-color: var(--accent); color: var(--accent-soft); }
+    .rating-indicator { color: var(--accent-soft); font-size: 10px; margin-right: 5px; }
+    .empty-state { color: var(--muted); text-align: center; padding: 48px 16px; font-size: 13px; }
+    .table-bottom { padding: 13px 18px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 10px; }
+    .pagination { display: flex; gap: 7px; align-items: center; }
+    .pagination button { border: 1px solid var(--line); background: transparent; color: var(--paper); border-radius: 8px; padding: 6px 10px; }
+    .pagination button:disabled { opacity: .35; cursor: default; }
+    .source-note { margin: 16px 2px 0; display: flex; justify-content: space-between; align-items: start; gap: 18px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+    .source-note p { margin: 0; max-width: 820px; }
+    .source-note a { text-decoration: none; }
+    .source-note a:hover { text-decoration: underline; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(5,6,5,.78); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 20; backdrop-filter: blur(6px); }
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(680px,100%); max-height: min(90vh,850px); overflow-y: auto; border: 1px solid #505247; border-radius: 18px; background: #20231e; box-shadow: var(--shadow); }
+    .modal-head { display: flex; justify-content: space-between; align-items: start; gap: 16px; padding: 21px 23px 17px; border-bottom: 1px solid var(--line); }
+    .modal-head h2 { font: 500 28px/1.1 Georgia,serif; margin: 6px 0; }
+    .modal-head p { color: var(--muted); margin: 0; font-size: 11px; }
+    .close-modal { border: 0; background: transparent; color: var(--muted); font-size: 23px; padding: 0 4px; }
+    .modal-content { padding: 20px 23px 24px; }
+    .beer-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .fact { background: #2b2e27; border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font-size: 11px; color: var(--paper-dim); }
+    .fact strong { color: var(--accent-soft); font-weight: 750; }
+    .beer-description { color: var(--paper-dim); font: 14px/1.7 Georgia,serif; white-space: pre-line; margin: 0 0 20px; }
+    .modal-form-title { font: 500 18px Georgia,serif; margin: 0 0 6px; }
+    .local-note { color: var(--muted); font-size: 10px; margin: 0 0 15px; }
+    .rating-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 0 0 15px; }
+    .modal-field label { display: block; color: var(--muted); text-transform: uppercase; letter-spacing: .09em; font-size: 9px; font-weight: 750; margin: 0 0 6px; }
+    .modal-field textarea { resize: vertical; min-height: 82px; line-height: 1.5; }
+    .modal-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+    .saved-msg { color: var(--green); font-size: 11px; min-height: 15px; }
+    .footer { color: #777a70; font-size: 10px; margin-top: 16px; text-align: center; }
+    .print-header { display: none; }
+    @media (max-width: 1100px) {
+      .filter-grid { grid-template-columns: repeat(3,1fr); }
+      .charts { grid-template-columns: 1fr 1fr; }
+      .chart-card:first-child { grid-column: span 2; }
+    }
+    @media (max-width: 720px) {
+      .app-shell { padding: 0 16px 38px; }
+      .topbar { min-height: 62px; }
+      .sync-status { font-size: 0; gap: 0; }
+      .sync-status .status-dot { margin-right: 2px; }
+      .top-actions { gap: 8px; }
+      .hero { display: block; padding: 32px 0 22px; }
+      h1 { font-size: clamp(43px,12vw,62px); }
+      .hero p { font-size: 13px; }
+      .hero-meta { display: flex; align-items: baseline; gap: 9px; border-left: 0; padding: 15px 0 0; min-width: 0; }
+      .hero-meta strong { font-size: 23px; margin: 0; }
+      .hero-meta .meta-label, .hero-meta span:last-child { font-size: 10px; }
+      .stats { grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 12px; }
+      .stat-card { min-height: 98px; padding: 13px; }
+      .stat-value { font-size: 27px; margin-top: 10px; }
+      .filter-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .field.search-field { grid-column: span 2; }
+      .filter-footer { align-items: start; flex-direction: column; }
+      .filter-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+      .charts { grid-template-columns: 1fr; }
+      .chart-card:first-child { grid-column: auto; }
+      .chart-card { min-height: 255px; }
+      .table-toolbar { align-items: flex-start; flex-direction: column; }
+      .table-tools { width: 100%; flex-wrap: wrap; }
+      .table-tools .button { flex: 1; }
+      .source-note { flex-direction: column; }
+      .rating-grid { grid-template-columns: 1fr; }
+      .modal-head { padding: 18px 18px 14px; }
+      .modal-content { padding: 17px 18px 20px; }
+    }
+    @media (max-width: 420px) {
+      .filter-grid { grid-template-columns: 1fr 1fr; }
+      .range { gap: 4px; }
+      .range input { padding: 9px 7px; font-size: 11px; }
+      .section-head h2 { font-size: 19px; }
+      .button { padding: 8px 10px; }
+      .brand { letter-spacing: .08em; font-size: 9px; }
+    }
+    @media print {
+      :root { color-scheme: light; }
+      body { background: #fff; color: #171717; }
+      .app-shell { max-width: none; padding: 0; }
+      .topbar, .hero, .stats, .filters, .charts, .table-tools, .table-bottom, .source-note, .footer, .modal-backdrop { display: none !important; }
+      .print-header { display: block; margin: 0 0 14px; }
+      .print-header h1 { font-size: 27px; margin: 0 0 4px; color: #111; }
+      .print-header p { font-size: 10px; color: #555; margin: 0; }
+      .table-section { border: 0; background: #fff; }
+      .table-toolbar { padding: 0 0 9px; border: 0; }
+      .table-title { font-size: 18px; color: #111; }
+      .table-caption { color: #555; }
+      .table-wrap { overflow: visible; }
+      table { min-width: 0; width: 100%; }
+      th { color: #333; background: #f0eee7; font-size: 7px; padding: 6px 5px; }
+      td { color: #222; font-size: 8px; padding: 5px; border-bottom: 1px solid #ddd; }
+      .beer-name { color: #111; font-size: 10px; }
+      .beer-brewer, .style-name, .type-pill { color: #444; }
+      .confra-pill, .type-pill { color: #333; background: #eee; padding: 3px 5px; }
+      .tasting-button, .rating-indicator { display: none; }
+      .metric.missing, .missing-tag { color: #a35a00; }
+      @page { size: A4 landscape; margin: 12mm; }
+      tr { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">M</span><span>Mapa de Degustação</span></div>
+      <div class="top-actions">
+        <span class="sync-status" id="syncStatus" aria-live="polite"><i class="status-dot" id="statusDot"></i><span id="syncText">Conectando à planilha…</span></span>
+        <button class="icon-button" id="refreshButton" type="button" aria-label="Atualizar dados agora" title="Atualizar dados agora">↻ Atualizar</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Catálogo vivo · cervejas do encontro</div>
+          <h1>Mapa de<br>Degustação</h1>
+          <p>Explore as cervejas, compare estilos e encontre seu próximo copo. Os dados são lidos diretamente da planilha; suas notas de prova ficam salvas apenas neste navegador.</p>
+        </div>
+        <div class="hero-meta"><span class="meta-label">Volume informado no evento</span><strong id="eventLiters">—</strong><span>litros · aba Geral</span></div>
+      </section>
+
+      <div class="notice" id="errorNotice" role="alert"></div>
+      <div class="notice data" id="dataNotice" role="status"></div>
+
+      <section class="stats" aria-label="Resumo da seleção">
+        <article class="stat-card"><div class="stat-label">Litros na seleção <span>01</span></div><div class="stat-value" id="statLiters">—</div><div class="stat-foot">Soma dos volumes das cervejas filtradas</div></article>
+        <article class="stat-card"><div class="stat-label">Cervejas no resultado <span>02</span></div><div class="stat-value" id="statBeers">—</div><div class="stat-foot">Registros com nome válido no catálogo</div></article>
+        <article class="stat-card"><div class="stat-label">Média por pessoa <span>03</span></div><div class="stat-value" id="statPerPerson">—</div><div class="stat-foot">Média global informada na aba Geral</div></article>
+        <article class="stat-card"><div class="stat-label">Com pendências <span>04</span></div><div class="stat-value" id="statPending">—</div><div class="stat-foot">Cervejas com ABV, IBU ou EBC ausente</div></article>
+      </section>
+
+      <section class="filters" aria-labelledby="filterTitle">
+        <div class="section-head"><h2 id="filterTitle">Encontre seu estilo</h2><span class="eyebrow">Filtros do catálogo</span></div>
+        <div class="filter-grid">
+          <div class="field"><label for="confraFilter">Confraria</label><select id="confraFilter"><option value="">Todas</option></select></div>
+          <div class="field"><label for="typeFilter">Categoria</label><select id="typeFilter"><option value="">Todas</option></select></div>
+          <div class="field"><label for="styleFilter">Estilo BJCP</label><select id="styleFilter"><option value="">Todos</option></select></div>
+          <div class="field"><label>ABV (%)</label><div class="range"><input id="abvMin" type="number" min="0" max="100" step="0.1" placeholder="mín." aria-label="ABV mínimo em porcentagem"><input id="abvMax" type="number" min="0" max="100" step="0.1" placeholder="máx." aria-label="ABV máximo em porcentagem"></div></div>
+          <div class="field"><label>IBU</label><div class="range"><input id="ibuMin" type="number" min="0" step="1" placeholder="mín." aria-label="IBU mínimo"><input id="ibuMax" type="number" min="0" step="1" placeholder="máx." aria-label="IBU máximo"></div></div>
+          <div class="field search-field"><label for="searchInput">Busca livre</label><input id="searchInput" type="search" placeholder="Cerveja, cervejeiro, confraria ou chopeira…" autocomplete="off"></div>
+          <div class="field"><label>EBC</label><div class="range"><input id="ebcMin" type="number" min="0" step="1" placeholder="mín." aria-label="EBC mínimo"><input id="ebcMax" type="number" min="0" step="1" placeholder="máx." aria-label="EBC máximo"></div></div>
+        </div>
+        <div class="filter-footer">
+          <label class="check-label"><input id="pendingOnly" type="checkbox"> Mostrar apenas cervejas com ABV, IBU ou EBC pendente</label>
+          <div class="filter-actions"><span class="result-count" id="filterResultCount">Carregando…</span><button class="button small" id="clearFilters" type="button">Limpar filtros</button></div>
+        </div>
+      </section>
+
+      <section class="charts" aria-label="Gráficos do catálogo">
+        <article class="chart-card"><header><div><h2 class="chart-title">Amargor × teor alcoólico</h2><div class="chart-subtitle">Toque em um ponto para abrir a ficha da cerveja</div></div></header><div id="scatterChart"></div></article>
+        <article class="chart-card"><header><div><h2 class="chart-title">Litros por confraria</h2><div class="chart-subtitle">Selecione uma barra para filtrar</div></div></header><div id="confraChart"></div></article>
+        <article class="chart-card"><header><div><h2 class="chart-title">Estilos mais presentes</h2><div class="chart-subtitle">Selecione um estilo para filtrar</div></div></header><div id="styleChart"></div></article>
+      </section>
+
+      <section class="table-section" aria-labelledby="tableTitle">
+        <div class="print-header"><h1>Mapa de Degustação</h1><p id="printDate"></p></div>
+        <div class="table-toolbar">
+          <div><h2 class="table-title" id="tableTitle">Catálogo de cervejas</h2><div class="table-caption" id="tableCaption">Dados sincronizados da planilha do evento</div></div>
+          <div class="table-tools"><select id="sortSelect" aria-label="Ordenar resultados"><option value="name">Ordenar: nome</option><option value="confra">Ordenar: confraria</option><option value="abv">Ordenar: ABV</option><option value="ibu">Ordenar: IBU</option><option value="volume">Ordenar: volume</option></select><button class="button small" id="csvButton" type="button">↓ CSV</button><button class="button small primary" id="printButton" type="button">Imprimir / PDF</button></div>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Cerveja / cervejeiro</th><th>Confraria</th><th>Categoria</th><th>Estilo BJCP</th><th>ABV</th><th>IBU</th><th>EBC</th><th>Volume</th><th>Degustação</th></tr></thead><tbody id="beerRows"><tr><td colspan="9" class="empty-state">Carregando cervejas da planilha…</td></tr></tbody></table></div>
+        <div class="table-bottom"><span id="tableCount">Aguardando dados</span><div class="pagination"><button id="prevPage" type="button" aria-label="Página anterior">←</button><span id="pageLabel">—</span><button id="nextPage" type="button" aria-label="Próxima página">→</button></div></div>
+      </section>
+      <div class="source-note"><p>Fonte: abas <strong>ALL CERVEJAS</strong> (catálogo detalhado) e <strong>Geral</strong> (resumo e média por pessoa). A planilha atualiza automaticamente a cada 5 minutos. As avaliações são armazenadas localmente neste navegador e não são enviadas à planilha.</p><a href="https://docs.google.com/spreadsheets/d/1S_ajLE6RhxOfa771lQaWYcAKhK_BnS1fRC9lLhABLx4/edit" target="_blank" rel="noreferrer">Abrir planilha ↗</a></div>
+    </main>
+    <div class="footer">Feito para descobrir, comparar e degustar com curiosidade.</div>
+  </div>
+
+  <div class="modal-backdrop" id="tastingModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head"><div><div class="eyebrow" id="modalEyebrow">Ficha de degustação</div><h2 id="modalTitle">Cerveja</h2><p id="modalSubTitle"></p></div><button class="close-modal" id="closeModal" type="button" aria-label="Fechar">×</button></div>
+      <div class="modal-content">
+        <div class="beer-facts" id="modalFacts"></div>
+        <p class="beer-description" id="modalDescription"></p>
+        <h3 class="modal-form-title">Seu cartão de notas</h3>
+        <p class="local-note">Escolha uma nota de 1 a 5 e registre suas impressões. Salvo somente neste navegador.</p>
+        <div class="rating-grid">
+          <div class="modal-field"><label for="aromaRating">Aroma · 1–5</label><select id="aromaRating"><option value="">Sem nota</option><option value="1">1 · discreto</option><option value="2">2 · leve</option><option value="3">3 · bom</option><option value="4">4 · marcante</option><option value="5">5 · excelente</option></select></div>
+          <div class="modal-field"><label for="tasteRating">Sabor · 1–5</label><select id="tasteRating"><option value="">Sem nota</option><option value="1">1 · discreto</option><option value="2">2 · leve</option><option value="3">3 · bom</option><option value="4">4 · marcante</option><option value="5">5 · excelente</option></select></div>
+          <div class="modal-field"><label for="overallRating">Impressão geral · 1–5</label><select id="overallRating"><option value="">Sem nota</option><option value="1">1 · não repetiria</option><option value="2">2 · razoável</option><option value="3">3 · gostei</option><option value="4">4 · muito boa</option><option value="5">5 · favorita</option></select></div>
+        </div>
+        <div class="modal-field"><label for="tastingNote">Notas livres</label><textarea id="tastingNote" placeholder="Aroma, sabores percebidos, textura, harmonização…"></textarea></div>
+        <div class="modal-footer"><span class="saved-msg" id="savedMessage" aria-live="polite"></span><div><button class="button small" id="deleteNote" type="button">Apagar nota</button> <button class="button primary" id="saveNote" type="button">Salvar nota local</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Para uma planilha pública, mantenha DATA_MODE = "public". Veja README.md para API Key ou proxy privado.
+    const CONFIG = {
+      spreadsheetId: "1S_ajLE6RhxOfa771lQaWYcAKhK_BnS1fRC9lLhABLx4",
+      dataMode: "public", // "public" | "api-key" | "proxy"
+      sheetsApiKey: "",    // somente para planilha pública; restrinja a chave por domínio e API
+      detailTab: "ALL CERVEJAS",
+      summaryTab: "Geral",
+      refreshMs: 5 * 60 * 1000,
+      pageSize: 20
+    };
+    const STORAGE_KEY = "mapa-degustacao-notas-v1";
+    const $ = (selector) => document.querySelector(selector);
+    const state = { beers: [], summary: [], filtered: [], page: 1, globalLiters: null, perPerson: null, notes: {}, activeBeer: null, printing: false, lastUpdated: null };
+    try { state.notes = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { state.notes = {}; }
+
+    const clean = (v) => String(v ?? "").trim();
+    const normalized = (v) => clean(v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ");
+    const esc = (v) => clean(v).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]));
+    const numeric = (v) => {
+      if (v === null || v === undefined || clean(v) === "" || clean(v).startsWith("#")) return null;
+      if (typeof v === "number") return Number.isFinite(v) ? v : null;
+      const text = clean(v).replace(/\s/g, "").replace(/%/g, "").replace(/,(?=\d{1,2}$)/, ".");
+      const n = Number(text);
+      return Number.isFinite(n) ? n : null;
+    };
+    const fmt = (value, digits = 1) => value == null ? "—" : Number(value).toLocaleString("pt-BR", { maximumFractionDigits: digits });
+    const fmtLiters = (value) => `${fmt(value, 0)} L`;
+    const fieldIndex = (headers, candidates, fallback = -1) => {
+      const wanted = candidates.map(normalized);
+      const index = headers.findIndex((h) => wanted.includes(normalized(h)));
+      return index >= 0 ? index : fallback;
+    };
+    const valueAt = (row, index) => index >= 0 ? row[index] : null;
+
+    function gvizSheet(sheetName) {
+      return new Promise((resolve, reject) => {
+        const callback = `sheetCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const url = new URL(`https://docs.google.com/spreadsheets/d/${CONFIG.spreadsheetId}/gviz/tq`);
+        url.searchParams.set("tqx", `out:json;responseHandler:${callback}`);
+        url.searchParams.set("sheet", sheetName);
+        url.searchParams.set("_", String(Date.now()));
+        const script = document.createElement("script");
+        let timeout;
+        const cleanup = () => { clearTimeout(timeout); script.remove(); try { delete window[callback]; } catch { window[callback] = undefined; } };
+        window[callback] = (payload) => {
+          cleanup();
+          if (payload?.status && payload.status !== "ok") return reject(new Error(payload.errors?.[0]?.detailed_message || `Não foi possível ler a aba ${sheetName}.`));
+          resolve(payload?.table || { cols: [], rows: [] });
+        };
+        script.onerror = () => { cleanup(); reject(new Error(`Falha ao acessar a aba “${sheetName}”. Verifique se a planilha está compartilhada como “qualquer pessoa com o link”.`)); };
+        timeout = setTimeout(() => { cleanup(); reject(new Error(`Tempo esgotado ao carregar a aba “${sheetName}”.`)); }, 25000);
+        script.src = url.toString();
+        document.head.appendChild(script);
+      });
+    }
+
+    async function sheetsApiGrid(sheetName) {
+      if (!CONFIG.sheetsApiKey) throw new Error("Preencha CONFIG.sheetsApiKey com uma chave restrita da Google Sheets API.");
+      const range = `'${sheetName.replace(/'/g, "''")}'!A:AC`;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.spreadsheetId}/values/${encodeURIComponent(range)}?key=${encodeURIComponent(CONFIG.sheetsApiKey)}`;
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Google Sheets API respondeu ${response.status}. Confira a chave e o compartilhamento da planilha.`);
+      return (await response.json()).values || [];
+    }
+
+    async function loadSource() {
+      if (CONFIG.dataMode === "proxy") {
+        const response = await fetch("/api/planilha", { cache: "no-store" });
+        if (!response.ok) throw new Error(`O proxy da planilha respondeu ${response.status}. Confira a função Vercel e as variáveis de ambiente.`);
+        return response.json();
+      }
+      if (CONFIG.dataMode === "api-key") {
+        const [detailGrid, summaryGrid] = await Promise.all([sheetsApiGrid(CONFIG.detailTab), sheetsApiGrid(CONFIG.summaryTab)]);
+        return { detailGrid, summaryGrid };
+      }
+      const [detailTable, summaryTable] = await Promise.all([gvizSheet(CONFIG.detailTab), gvizSheet(CONFIG.summaryTab)]);
+      const grid = (table) => {
+        const headers = (table.cols || []).map((col) => col.label || col.id || "");
+        const rows = (table.rows || []).map((row) => headers.map((_, i) => row?.c?.[i]?.v ?? row?.c?.[i]?.f ?? ""));
+        return [headers, ...rows];
+      };
+      return { detailGrid: grid(detailTable), summaryGrid: grid(summaryTable) };
+    }
+
+    function unpackGrid(grid) {
+      if (!Array.isArray(grid) || !grid.length) return { headers: [], rows: [] };
+      const headerRow = grid.findIndex((row) => Array.isArray(row) && row.some((cell) => ["confraria", "chopeira", "nome da cerveja"].includes(normalized(cell))));
+      const start = headerRow >= 0 ? headerRow : 0;
+      return { headers: (grid[start] || []).map(clean), rows: grid.slice(start + 1).filter((row) => Array.isArray(row)) };
+    }
+
+    function parseBeers(grid) {
+      const { headers, rows } = unpackGrid(grid);
+      const ix = {
+        confra: fieldIndex(headers, ["Confraria"], 0),
+        type: fieldIndex(headers, ["Tipo", "Categoria"], 1),
+        brewer: fieldIndex(headers, ["Cervejeiro", "Cervejaria", "Produtor"], 2),
+        name: fieldIndex(headers, ["Nome da cerveja", "Cerveja"], 3),
+        style: fieldIndex(headers, ["Estilo BJCP", "Estilo"], 4),
+        description: fieldIndex(headers, ["Descrição", "Descricao"], 5),
+        volume: fieldIndex(headers, ["Volume", "Volume (L)"], 6),
+        abv: fieldIndex(headers, ["ABV"], 7),
+        ibu: fieldIndex(headers, ["IBU"], 8),
+        ebc: fieldIndex(headers, ["EBC"], 9)
+      };
+      const beers = [];
+      for (const row of rows) {
+        const name = clean(valueAt(row, ix.name));
+        const confra = clean(valueAt(row, ix.confra));
+        if (!name || !confra || /^#(REF|N\/A|VALUE|ERROR)!?/i.test(name)) continue;
+        let abv = numeric(valueAt(row, ix.abv));
+        if (abv !== null && abv > 0 && abv <= 1) abv *= 100;
+        const beer = {
+          confra, type: clean(valueAt(row, ix.type)), brewer: clean(valueAt(row, ix.brewer)), name,
+          style: clean(valueAt(row, ix.style)), description: clean(valueAt(row, ix.description)),
+          volume: numeric(valueAt(row, ix.volume)), abv, ibu: numeric(valueAt(row, ix.ibu)), ebc: numeric(valueAt(row, ix.ebc))
+        };
+        beer.missing = { abv: beer.abv === null, ibu: beer.ibu === null, ebc: beer.ebc === null };
+        beer.pending = beer.missing.abv || beer.missing.ibu || beer.missing.ebc;
+        beer.search = normalized([beer.name, beer.brewer, beer.confra, beer.type, beer.style, beer.description].join(" "));
+        beer.key = `${normalized(beer.confra)}|${normalized(beer.name)}|${normalized(beer.brewer)}`;
+        beer.index = beers.length;
+        beers.push(beer);
+      }
+      return beers;
+    }
+
+    function parseSummary(grid) {
+      const { headers, rows } = unpackGrid(grid);
+      const ix = {
+        taps: fieldIndex(headers, ["Chopeira"], 0),
+        liters: fieldIndex(headers, ["Total ( L)", "Total (L)", "Total"], 1),
+        confra: fieldIndex(headers, ["Confrarias"], 2),
+        beerCount: fieldIndex(headers, ["Cervejas"], 26),
+        abvMissing: fieldIndex(headers, ["ABV faltando"], 21),
+        ibuMissing: fieldIndex(headers, ["IBU faltando"], 22),
+        ebcMissing: fieldIndex(headers, ["EBC faltando"], 23)
+      };
+      let total = null;
+      let totalBeers = null;
+      let missingTotals = null;
+      let perPerson = null;
+      const byConfra = new Map();
+      for (const row of rows) {
+        const first = normalized(row[0]);
+        if (first === "media por pessoa" || (!clean(row[0]) && numeric(row[1]) !== null && !clean(row[2]))) { perPerson = numeric(row[1]); continue; }
+        const confra = clean(valueAt(row, ix.confra));
+        if (!confra) continue;
+        if (normalized(confra) === "total") {
+          total = numeric(valueAt(row, ix.liters));
+          totalBeers = numeric(valueAt(row, ix.beerCount));
+          missingTotals = {
+            abv: numeric(valueAt(row, ix.abvMissing)) || 0,
+            ibu: numeric(valueAt(row, ix.ibuMissing)) || 0,
+            ebc: numeric(valueAt(row, ix.ebcMissing)) || 0
+          };
+          continue;
+        }
+        byConfra.set(normalized(confra), {
+          confra, liters: numeric(valueAt(row, ix.liters)), taps: numeric(valueAt(row, ix.taps)),
+          abvMissing: numeric(valueAt(row, ix.abvMissing)) || 0,
+          ibuMissing: numeric(valueAt(row, ix.ibuMissing)) || 0,
+          ebcMissing: numeric(valueAt(row, ix.ebcMissing)) || 0
+        });
+      }
+      return { byConfra, total, totalBeers, missingTotals, perPerson };
+    }
+
+    function populateFilters() {
+      fillSelect($("#confraFilter"), [...new Set(state.beers.map((b) => b.confra))].sort((a,b) => a.localeCompare(b,"pt-BR")), "Todas");
+      fillSelect($("#typeFilter"), [...new Set(state.beers.map((b) => b.type).filter(Boolean))].sort((a,b) => a.localeCompare(b,"pt-BR")), "Todas");
+      fillSelect($("#styleFilter"), [...new Set(state.beers.map((b) => b.style).filter(Boolean))].sort((a,b) => a.localeCompare(b,"pt-BR")), "Todos");
+    }
+    function fillSelect(select, options, allLabel) {
+      const previous = select.value;
+      select.innerHTML = `<option value="">${esc(allLabel)}</option>` + options.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+      if (options.includes(previous)) select.value = previous;
+    }
+
+    function applyFilters() {
+      const confra = $("#confraFilter").value;
+      const type = $("#typeFilter").value;
+      const style = $("#styleFilter").value;
+      const search = normalized($("#searchInput").value);
+      const pendingOnly = $("#pendingOnly").checked;
+      const range = (field) => ({ min: numeric($(`#${field}Min`).value), max: numeric($(`#${field}Max`).value) });
+      const abv = range("abv"), ibu = range("ibu"), ebc = range("ebc");
+      const inRange = (value, limits) => {
+        if (limits.min !== null && (value === null || value < limits.min)) return false;
+        if (limits.max !== null && (value === null || value > limits.max)) return false;
+        return true;
+      };
+      let filtered = state.beers.filter((beer) => {
+        if (confra && beer.confra !== confra) return false;
+        if (type && beer.type !== type) return false;
+        if (style && beer.style !== style) return false;
+        if (search && !beer.search.includes(search)) return false;
+        if (pendingOnly && !beer.pending) return false;
+        return inRange(beer.abv, abv) && inRange(beer.ibu, ibu) && inRange(beer.ebc, ebc);
+      });
+      const sort = $("#sortSelect").value;
+      filtered.sort((a,b) => {
+        if (sort === "confra") return a.confra.localeCompare(b.confra,"pt-BR") || a.name.localeCompare(b.name,"pt-BR");
+        if (sort === "abv") return (b.abv ?? -1) - (a.abv ?? -1);
+        if (sort === "ibu") return (b.ibu ?? -1) - (a.ibu ?? -1);
+        if (sort === "volume") return (b.volume ?? -1) - (a.volume ?? -1);
+        return a.name.localeCompare(b.name,"pt-BR");
+      });
+      state.filtered = filtered;
+      state.page = 1;
+      renderAll();
+    }
+
+    function renderAll() {
+      renderStats(); renderTable(); renderCharts();
+      $("#filterResultCount").textContent = `${state.filtered.length} ${state.filtered.length === 1 ? "resultado" : "resultados"}`;
+      $("#tableCaption").textContent = `Filtros aplicados · ${state.lastUpdated ? `atualizado ${state.lastUpdated.toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"})}` : "planilha ao vivo"}`;
+    }
+    function renderStats() {
+      const liters = state.filtered.reduce((sum,b) => sum + (b.volume || 0), 0);
+      const pending = state.filtered.filter((b) => b.pending).length;
+      $("#statLiters").textContent = fmt(liters, 0);
+      $("#statBeers").textContent = fmt(state.filtered.length, 0);
+      $("#statPerPerson").textContent = state.perPerson == null ? "—" : fmt(state.perPerson, 2);
+      $("#statPending").textContent = fmt(pending, 0);
+      $("#eventLiters").textContent = state.globalLiters == null ? "—" : fmtLiters(state.globalLiters);
+    }
+    function displayMetric(value, unit) {
+      if (value === null || value === undefined) return `<span class="metric missing">—<span class="missing-tag">pendente</span></span>`;
+      return `<span class="metric">${fmt(value, value % 1 ? 1 : 0)}${unit}</span>`;
+    }
+    function renderTable() {
+      const tbody = $("#beerRows");
+      const pageSize = state.printing ? Math.max(state.filtered.length, 1) : CONFIG.pageSize;
+      const pages = Math.max(1, Math.ceil(state.filtered.length / pageSize));
+      state.page = Math.min(state.page, pages);
+      const start = (state.page - 1) * pageSize;
+      const rows = state.filtered.slice(start, start + pageSize);
+      if (!rows.length) tbody.innerHTML = `<tr><td colspan="9" class="empty-state">Nenhuma cerveja corresponde a estes filtros. Tente ampliar a busca ou limpar alguns critérios.</td></tr>`;
+      else tbody.innerHTML = rows.map((b) => {
+        const rating = state.notes[b.key];
+        const overall = rating?.overall ? `<span class="rating-indicator" title="Impressão geral salva">★ ${esc(rating.overall)}/5</span>` : "";
+        const tap = state.summaryByConfra?.get(normalized(b.confra))?.taps;
+        const tapSearch = tap != null ? ` Chopeira ${tap}` : "";
+        return `<tr>
+          <td><div class="beer-name">${esc(b.name)}</div><div class="beer-brewer">${esc(b.brewer || "Cervejeiro não informado")}</div></td>
+          <td><span class="confra-pill" data-search="${esc(normalized(b.confra + tapSearch))}">${esc(b.confra)}</span></td>
+          <td><span class="type-pill">${esc(b.type || "—")}</span></td>
+          <td><div class="style-name">${esc(b.style || "Estilo não informado")}</div></td>
+          <td>${displayMetric(b.abv, "%")}</td><td>${displayMetric(b.ibu, "")}</td><td>${displayMetric(b.ebc, "")}</td><td>${displayMetric(b.volume, " L")}</td>
+          <td>${overall}<button class="tasting-button" type="button" data-open-beer="${b.index}">${rating ? "Editar nota" : "＋ Avaliar"}</button></td>
+        </tr>`;
+      }).join("");
+      $("#tableCount").textContent = `${state.filtered.length} cervejas · ${fmt(state.filtered.reduce((sum,b) => sum + (b.volume || 0),0),0)} L na seleção`;
+      $("#pageLabel").textContent = state.filtered.length ? `${state.page} / ${pages}` : "0 / 0";
+      $("#prevPage").disabled = state.page <= 1;
+      $("#nextPage").disabled = state.page >= pages;
+      $("#printDate").textContent = `Cardápio de degustação · ${new Date().toLocaleString("pt-BR")} · ${state.filtered.length} cervejas nesta seleção`;
+    }
+
+    function svgEmpty(text) { return `<div class="chart-empty">${esc(text)}</div>`; }
+    function renderCharts() {
+      renderScatter(); renderConfraBars(); renderStyleBars();
+    }
+    function renderScatter() {
+      const el = $("#scatterChart");
+      const pts = state.filtered.filter((b) => b.abv !== null && b.ibu !== null);
+      if (!pts.length) { el.innerHTML = svgEmpty("Sem registros com ABV e IBU para plotar."); return; }
+      const W=440,H=205,L=42,R=12,T=8,B=31, PW=W-L-R,PH=H-T-B;
+      const maxX=Math.max(100, Math.ceil(Math.max(...pts.map(b=>b.ibu))/20)*20);
+      const maxY=Math.max(12, Math.ceil(Math.max(...pts.map(b=>b.abv))/2)*2);
+      let content="";
+      for(let i=0;i<=4;i++){
+        const y=T+PH*i/4, value=maxY*(1-i/4);
+        content+=`<line class="grid-line" x1="${L}" y1="${y}" x2="${W-R}" y2="${y}"/><text class="axis-label" x="${L-8}" y="${y+3}" text-anchor="end">${fmt(value,0)}%</text>`;
+      }
+      for(let i=0;i<=4;i++){
+        const x=L+PW*i/4, value=maxX*i/4;
+        content+=`<line class="grid-line" x1="${x}" y1="${T}" x2="${x}" y2="${T+PH}"/><text class="axis-label" x="${x}" y="${H-12}" text-anchor="middle">${fmt(value,0)}</text>`;
+      }
+      content+=`<line class="axis" x1="${L}" y1="${T+PH}" x2="${W-R}" y2="${T+PH}"/><line class="axis" x1="${L}" y1="${T}" x2="${L}" y2="${T+PH}"/><text class="axis-label" x="${L+PW/2}" y="${H-1}" text-anchor="middle">IBU</text>`;
+      pts.forEach((b)=>{
+        const x=L+(b.ibu/maxX)*PW, y=T+PH-(b.abv/maxY)*PH;
+        content+=`<circle class="chart-point" cx="${x}" cy="${y}" r="4" data-open-beer="${b.index}"><title>${esc(b.name)} · ${fmt(b.abv,1)}% ABV · ${fmt(b.ibu,0)} IBU — clique para abrir a ficha</title></circle>`;
+      });
+      el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de dispersão de IBU por ABV">${content}</svg>`;
+    }
+    function renderBars(target, entries, kind) {
+      const el=$(target);
+      if(!entries.length){el.innerHTML=svgEmpty("Sem dados para os filtros atuais.");return;}
+      const W=340,H=205,L=104,R=30,T=8,rowH=22,gap=3;
+      const max=Math.max(...entries.map(x=>x.value),1);
+      let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${kind === "confra" ? "Litros por confraria" : "Quantidade por estilo"}">`;
+      entries.forEach((item,i)=>{
+        const y=T+i*(rowH+gap), width=(W-L-R)*item.value/max;
+        const label=item.label.length>16?item.label.slice(0,15)+"…":item.label;
+        const dataAttr=kind==="confra"?`data-filter-confra="${esc(item.label)}"`:`data-filter-style="${esc(item.label)}"`;
+        svg+=`<text class="bar-label" x="${L-8}" y="${y+14}" text-anchor="end">${esc(label)}</text><rect class="bar-bg" x="${L}" y="${y+3}" width="${W-L-R}" height="13" rx="6"/><rect class="bar-fill" x="${L}" y="${y+3}" width="${Math.max(width,2)}" height="13" rx="6"/><rect class="bar-hit" x="0" y="${y}" width="${W}" height="${rowH}" ${dataAttr}><title>Filtrar ${esc(item.label)}</title></rect><text class="bar-value" x="${Math.min(L+width+6,W-R+2)}" y="${y+14}">${fmt(item.value,0)}${kind==="confra"?" L":""}</text>`;
+      });
+      svg+=`</svg>`;el.innerHTML=svg;
+    }
+    function renderConfraBars() {
+      const agg=new Map();
+      state.filtered.forEach((b)=>agg.set(b.confra,(agg.get(b.confra)||0)+(b.volume||0)));
+      const entries=[...agg].map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value).slice(0,8);
+      renderBars("#confraChart",entries,"confra");
+    }
+    function renderStyleBars() {
+      const agg=new Map();
+      state.filtered.forEach((b)=>{const label=b.style||"Estilo não informado";agg.set(label,(agg.get(label)||0)+1);});
+      const entries=[...agg].map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value).slice(0,8);
+      renderBars("#styleChart",entries,"style");
+    }
+
+    function setSync(message, mode="ok") {
+      $("#syncText").textContent=message;
+      $("#statusDot").className=`status-dot ${mode}`;
+    }
+    async function refreshData(silent=false) {
+      if(!silent) { setSync("Sincronizando…"); $("#errorNotice").classList.remove("show"); }
+      try {
+        const source=await loadSource();
+        let detailGrid=source.detailGrid, summaryGrid=source.summaryGrid;
+        if(source.beers && source.summary) { detailGrid=source.beers; summaryGrid=source.summary; }
+        if(!detailGrid || !summaryGrid) throw new Error("A fonte não retornou as abas necessárias. Confira a configuração de dados.");
+        state.beers=parseBeers(detailGrid);
+        const parsed=parseSummary(summaryGrid);
+        state.summaryByConfra=parsed.byConfra; state.globalLiters=parsed.total; state.perPerson=parsed.perPerson;
+        state.beers.forEach((beer)=>{
+          const taps=parsed.byConfra.get(normalized(beer.confra))?.taps;
+          beer.search=normalized([beer.name,beer.brewer,beer.confra,beer.type,beer.style,beer.description,taps==null?"":`Chopeira ${taps}`].join(" "));
+        });
+        if(!state.beers.length) throw new Error("A aba ALL CERVEJAS não retornou cervejas com nome. Verifique o compartilhamento e os cabeçalhos.");
+        populateFilters();
+        state.lastUpdated=new Date();
+        setSync(`Atualizado às ${state.lastUpdated.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}`,"ok");
+        $("#errorNotice").classList.remove("show");
+        const dataDifferences=[];
+        const detailLiters=state.beers.reduce((sum,beer)=>sum+(beer.volume||0),0);
+        const detailMissing={abv:state.beers.filter(beer=>beer.missing.abv).length,ibu:state.beers.filter(beer=>beer.missing.ibu).length,ebc:state.beers.filter(beer=>beer.missing.ebc).length};
+        if(parsed.totalBeers!==null&&parsed.totalBeers!==state.beers.length) dataDifferences.push(`Geral informa ${fmt(parsed.totalBeers,0)} cervejas; ALL CERVEJAS tem ${fmt(state.beers.length,0)} registros nomeados.`);
+        if(parsed.total!==null&&Math.abs(parsed.total-detailLiters)>0.5) dataDifferences.push(`Geral informa ${fmtLiters(parsed.total)}; a soma dos volumes no catálogo detalhado é ${fmtLiters(detailLiters)}.`);
+        if(parsed.missingTotals&&Object.keys(detailMissing).some(key=>parsed.missingTotals[key]!==detailMissing[key])) dataDifferences.push(`Pendências ABV/IBU/EBC: Geral ${parsed.missingTotals.abv}/${parsed.missingTotals.ibu}/${parsed.missingTotals.ebc}; catálogo ${detailMissing.abv}/${detailMissing.ibu}/${detailMissing.ebc}.`);
+        if(dataDifferences.length){
+          $("#dataNotice").textContent=`As abas não coincidem: ${dataDifferences.join(" ")} Os filtros e os litros da seleção usam os registros de ALL CERVEJAS; volume do evento e média por pessoa vêm de Geral.`;
+          $("#dataNotice").classList.add("show");
+        } else $("#dataNotice").classList.remove("show");
+        applyFilters();
+      } catch(error) {
+        console.error(error);
+        setSync("Falha na sincronização","error");
+        const notice=$("#errorNotice"); notice.textContent=`Não foi possível ler a planilha. ${error.message} Se estiver abrindo pelo arquivo local, rode um servidor local ou publique o site. Para a leitura pública, a planilha precisa estar compartilhada como “qualquer pessoa com o link — leitor”.`;
+        notice.classList.add("show");
+        if(state.beers.length) renderAll();
+      }
+    }
+
+    function openTasting(index) {
+      const beer=state.beers.find((b)=>b.index===Number(index));
+      if(!beer)return;
+      state.activeBeer=beer;
+      $("#modalTitle").textContent=beer.name;
+      $("#modalSubTitle").textContent=[beer.brewer,beer.confra,beer.style].filter(Boolean).join(" · ");
+      $("#modalFacts").innerHTML=`<span class="fact"><strong>ABV</strong> ${beer.abv===null?"Pendente":`${fmt(beer.abv,1)}%`}</span><span class="fact"><strong>IBU</strong> ${beer.ibu===null?"Pendente":fmt(beer.ibu,0)}</span><span class="fact"><strong>EBC</strong> ${beer.ebc===null?"Pendente":fmt(beer.ebc,0)}</span><span class="fact"><strong>Volume</strong> ${beer.volume===null?"Pendente":`${fmt(beer.volume,0)} L`}</span><span class="fact"><strong>Tipo</strong> ${esc(beer.type||"Não informado")}</span>`;
+      $("#modalDescription").textContent=beer.description||"Descrição não informada na planilha.";
+      const note=state.notes[beer.key]||{};
+      $("#aromaRating").value=note.aroma||""; $("#tasteRating").value=note.taste||""; $("#overallRating").value=note.overall||""; $("#tastingNote").value=note.text||"";
+      $("#savedMessage").textContent=note.updated?`Nota salva em ${new Date(note.updated).toLocaleDateString("pt-BR")}.`:"";
+      $("#tastingModal").classList.add("open"); document.body.style.overflow="hidden"; $("#closeModal").focus();
+    }
+    function closeTasting() { $("#tastingModal").classList.remove("open"); document.body.style.overflow=""; state.activeBeer=null; }
+    function persistNotes() {
+      try { localStorage.setItem(STORAGE_KEY,JSON.stringify(state.notes)); return true; }
+      catch(error) { console.error(error); return false; }
+    }
+    function saveTasting() {
+      if(!state.activeBeer)return;
+      const beer=state.activeBeer;
+      const note={aroma:$("#aromaRating").value,taste:$("#tasteRating").value,overall:$("#overallRating").value,text:$("#tastingNote").value.trim(),updated:new Date().toISOString()};
+      if(!note.aroma&&!note.taste&&!note.overall&&!note.text){delete state.notes[beer.key];}
+      else state.notes[beer.key]=note;
+      const ok=persistNotes(); $("#savedMessage").textContent=ok?"Nota salva neste navegador.":"Não foi possível salvar. Verifique o armazenamento do navegador.";
+      renderTable();
+    }
+    function deleteTasting() {
+      if(!state.activeBeer)return;
+      delete state.notes[state.activeBeer.key]; persistNotes();
+      $("#aromaRating").value=""; $("#tasteRating").value=""; $("#overallRating").value=""; $("#tastingNote").value="";
+      $("#savedMessage").textContent="Nota apagada deste navegador."; renderTable();
+    }
+    function exportCsv() {
+      const headers=["Confraria","Categoria","Cervejeiro","Nome da cerveja","Estilo BJCP","ABV (%)","IBU","EBC","Volume (L)"];
+      const rows=state.filtered.map(b=>[b.confra,b.type,b.brewer,b.name,b.style,b.abv,b.ibu,b.ebc,b.volume]);
+      const cell=(v)=>`"${String(v??"").replace(/"/g,'""')}"`;
+      const csv="\uFEFF"+[headers,...rows].map(row=>row.map(cell).join(";")).join("\r\n");
+      const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}); const url=URL.createObjectURL(blob);
+      const a=document.createElement("a"); a.href=url; a.download=`catalogo-cervejas-${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+    function clearFilters() {
+      ["#confraFilter","#typeFilter","#styleFilter","#searchInput","#abvMin","#abvMax","#ibuMin","#ibuMax","#ebcMin","#ebcMax"].forEach(s=>$(s).value="");
+      $("#pendingOnly").checked=false; $("#sortSelect").value="name"; applyFilters();
+    }
+
+    document.querySelectorAll("#confraFilter,#typeFilter,#styleFilter,#sortSelect,#pendingOnly").forEach(el=>el.addEventListener("change",applyFilters));
+    document.querySelectorAll("#abvMin,#abvMax,#ibuMin,#ibuMax,#ebcMin,#ebcMax").forEach(el=>el.addEventListener("input",applyFilters));
+    $("#searchInput").addEventListener("input",applyFilters);
+    $("#clearFilters").addEventListener("click",clearFilters);
+    $("#refreshButton").addEventListener("click",()=>refreshData());
+    $("#prevPage").addEventListener("click",()=>{state.page=Math.max(1,state.page-1);renderTable();});
+    $("#nextPage").addEventListener("click",()=>{const pages=Math.max(1,Math.ceil(state.filtered.length/CONFIG.pageSize));state.page=Math.min(pages,state.page+1);renderTable();});
+    $("#csvButton").addEventListener("click",exportCsv);
+    $("#printButton").addEventListener("click",()=>{state.printing=true;renderTable();setTimeout(()=>window.print(),80);});
+    window.addEventListener("afterprint",()=>{state.printing=false;renderTable();});
+    $("#closeModal").addEventListener("click",closeTasting);
+    $("#tastingModal").addEventListener("click",(event)=>{if(event.target===$("#tastingModal"))closeTasting();});
+    $("#saveNote").addEventListener("click",saveTasting);
+    $("#deleteNote").addEventListener("click",deleteTasting);
+    document.addEventListener("keydown",(event)=>{if(event.key==="Escape"&&$("#tastingModal").classList.contains("open"))closeTasting();});
+    document.addEventListener("click",(event)=>{
+      const beerButton=event.target.closest("[data-open-beer]");
+      if(beerButton){openTasting(beerButton.getAttribute("data-open-beer"));return;}
+      const confra=event.target.closest("[data-filter-confra]");
+      if(confra){$("#confraFilter").value=confra.getAttribute("data-filter-confra");applyFilters();return;}
+      const style=event.target.closest("[data-filter-style]");
+      if(style){const value=style.getAttribute("data-filter-style");$("#styleFilter").value=[...$("#styleFilter").options].some(o=>o.value===value)?value:"";applyFilters();}
+    });
+
+    refreshData();
+    setInterval(()=>{if(document.visibilityState==="visible")refreshData(true);},CONFIG.refreshMs);
+  </script>
+</body>
+</html>
